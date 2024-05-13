@@ -3,14 +3,11 @@
     <div class="p-4">
       <el-tabs v-model="activeName">
         <el-tab-pane label="作品基本信息" name="first">
-          <el-form :model="bookForm" :rules="bookRules" ref="registerForm" label-width="100px" class="demo-registerForm">
+          <el-form :model="bookForm" :rules="bookRules" label-width="100px">
             <el-row>
               <el-col :span="14">
                 <el-form-item label="书名" prop="bname">
-                  <el-row>
-                    <el-col><el-input v-model="bookForm.bname" style="width: 300px;"></el-input></el-col>
-                    <el-col></el-col>
-                  </el-row>
+                  <el-input v-model="bookForm.bname" style="width: 300px;"></el-input>
                 </el-form-item>
               </el-col>
               <el-col :span="10">
@@ -55,14 +52,58 @@
         </el-tab-pane>
         <el-tab-pane label="用户自定义标签" name="second">
           <el-collapse v-model="activeNames">
-            <el-collapse-item v-for="(item, index) in bookReview.list" :key="index" :title="item.customTag" :name="String(index + 1)">
-              <div v-for="(content, contentIndex) in item.contents" :key="contentIndex">{{ content }}</div>
-            </el-collapse-item>
+            <el-select v-model="value" placeholder="请选择" @change="selectBookReviews">
+              <el-option
+                  v-for="item in options"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                  >
+              </el-option>
+            </el-select>
+              <ul class="list-group">
+                <li v-for="(item,index) in bookReview.list" :key="index" class="list-group-item">
+                  <div class="text-primary">{{item.customTag}}</div>
+                  <div class="m-3">
+                    <div class="row">
+                      <span class="col-10">
+                        <div class="font-weight-bold">用户：{{item.user.uname}}</div>
+                        <div class="text-muted">{{item.brDate}}</div>
+                      </span>
+                      <span class="col">
+                        <el-button
+                            v-if="item.tagStatus==='0'"
+                            type="primary"
+                            size="small"
+                            @click="updateCustomTag(item.brid,'1')">
+                          显示
+                        </el-button>
+                        <el-button
+                            v-else
+                            type="danger"
+                            size="small"
+                            @click="updateCustomTag(item.brid,'0')">
+                          隐藏
+                        </el-button>
+                      </span>
+                    </div>
+                    <div class="m-3 bg-dark-subtle">
+                      <p>
+                        {{item.brContent}}
+                      </p>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+<!--            </el-collapse-item>-->
           </el-collapse>
           <el-pagination
               background
               layout="prev, pager, next"
-              :total="1000">
+              :total="bookReview.total"
+              :current-page="pageNum"
+              :page-size="pageSize"
+              @current-change="handleCurrentChange">
           </el-pagination>
         </el-tab-pane>
       </el-tabs>
@@ -81,7 +122,7 @@
         activeNames:['1'],
         chapterNum:0,
         pageNum:1,
-        pageSize:5,
+        pageSize:3,
         bookForm:{
           bid:'',
           bname:'',
@@ -113,7 +154,21 @@
 
           ]
         },
+        options: [{
+          value: -1,
+          label: '全部'
+        }, {
+          value: 1,
+          label: '已显示'
+        }, {
+          value: 0,
+          label: '未显示'
+        }],
+        value:-1
       }
+    },
+    computed:{
+
     },
     methods:{
       getBid(){
@@ -140,7 +195,8 @@
         const response = await this.$http.post("/review/selectBookReviewByBid",
           this.$qs.stringify({bid:this.bid,
           pageNum:this.pageNum,
-          pageSize:this.pageSize})
+          pageSize:this.pageSize,
+          type:this.value})
         )
         this.bookReview = response.data.data
       },
@@ -176,6 +232,15 @@
         })
         console.log(response)
       },
+      async updateCustomTag(brid,tagStatus){
+        const response = await this.$http.post('/review/updateCustomTag',
+        this.$qs.stringify({
+          brid:brid,
+          tagStatus:tagStatus
+        }))
+        await this.selectBookReviews()
+        console.log(response)
+      },
       updateAll(){
         this.updateBookInfo()
         this.updateBookTags()
@@ -186,6 +251,10 @@
           this.$message.error('最多只能选择5个选项');
           this.bookTags = value.slice(0, 5);
         }
+      },
+      handleCurrentChange(val) {
+        this.pageNum = val;
+        this.selectBookReviews();
       },
       refresh(){
         setTimeout(() => {
