@@ -28,7 +28,7 @@
           </li>
           <li v-for="(item,index) in this.chapterPage.list" :key="index" class="list-group-item">
             <div class="row text-center">
-              <div class="col border-right">{{chapterPage.list.length-index}}</div>
+              <div class="col border-right">{{item.chapterNumber}}</div>
               <div class="col border-right">{{item.cname}}</div>
               <div class="col border-right">{{item.chapterDate}}</div>
               <div class="col border-right" :class="getColorClass(item.auditStatus)">{{getChapterStatus(item.auditStatus)}}</div>

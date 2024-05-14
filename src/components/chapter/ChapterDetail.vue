@@ -11,6 +11,9 @@
       </el-select>
       <div class="m-2">
         <el-form :model="chapter" label-width="100px">
+          <el-form-item label="章节序号" prop="chapterNumber">
+            <span>{{this.chapter.chapterNumber!==null?this.chapter.chapterNumber:(this.chapterNumber+1)}}</span>
+          </el-form-item>
           <el-form-item label="章节名" prop="bookStatus">
             <el-input v-model="chapter.cname" style="width: 400px"></el-input>
           </el-form-item>
@@ -39,12 +42,14 @@ export default {
       bid:1,
       bookList:[],
       per:0,
+      chapterNumber:null,
       chapter:{
         cname:'',
         chapterContent:'',
         bid:-1,
         auditStatus:-1,
         cid:'',
+        chapterNumber:null,
       }
     }
   },
@@ -56,6 +61,7 @@ export default {
       const response = await this.$http.get('/book/selectBook')
       this.bookList = response.data.data
       this.bid = this.bookList[0].bid
+       await this.selectChapterNumber()
       return Promise.resolve(response)
     },
     async selectChapterInfo(){
@@ -74,6 +80,7 @@ export default {
           bid:-1,
           auditStatus:-1,
           cid:'',
+          chapterNumber: null,
         };
       }, 1000);
       this.$message.success("成功")
@@ -82,9 +89,12 @@ export default {
       const response = await this.$http.get('/chapter/selectSubPermission?bid='+this.bid)
       this.per = response.data.data
       return Promise.resolve(response)
+    },
+    async selectChapterNumber(){
+      const response = await this.$http.get('/book/selectChapterNumber?bid='+this.bid)
+      this.chapterNumber = response.data.data
+      return Promise.resolve(response)
     }
-
-
   },
   async mounted() {
     await this.selectBookList()
