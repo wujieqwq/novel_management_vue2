@@ -59,7 +59,8 @@
                 prop="signDuration"
                 label="签约时长">
               <template slot-scope="scope">
-                <span>{{scope.row.signDuration}}年</span>
+                <span v-if="scope.row.signDuration!=null">{{scope.row.signDuration}}年</span>
+                <span v-else>待定</span>
               </template>
             </el-table-column>
             <el-table-column

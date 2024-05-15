@@ -4,7 +4,7 @@
       <el-row :gutter="10">
         <el-col :span="6">
           <span class="m-2">作品选择</span>
-          <el-select v-model="bid" filterable placeholder="请选择" @change="selectChapterReview">
+          <el-select v-model="bid" filterable placeholder="请选择" @change="selectChapterNumber">
             <el-option
                 v-for="item in bookList"
                 :key="item.bid"
@@ -15,24 +15,101 @@
         </el-col>
         <el-col :span="6">
           <span class="m-2">章节选择</span>
-          <el-select v-model="cnum" filterable placeholder="请选择" @change="selectChapterReview">
+          <el-select v-model="cid" filterable placeholder="请选择" @change="selectChapterReview">
             <el-option
-                v-for="item in adaptationStatus"
-                :key="item.type"
-                :label="item.value"
-                :value="item.type">
+                v-for="item in chapterNumber"
+                :key="item.cid"
+                :label="item.chapterNumber"
+                :value="item.cid">
             </el-option>
           </el-select>
         </el-col>
         <el-col :span="4">
-          <el-button type="primary" size="small" style="margin-top: 30px" @click="reSet">清空条件</el-button>
+          <el-button type="primary" size="small" style="margin-top: 30px" @click="reSet" >清空章节条件</el-button>
         </el-col>
       </el-row>
+      <div>
+        <ul class="list-group">
+          <li v-for="(item,index) in chapterReview.list" :key="index" class="list-group-item shadow-sm mt-2">
+            <div class="row border-1 border-bottom">
+              <div class="col-2">
+                第{{item.chapter.chapterNumber}}章
+              </div>
+              <div class="col-2">
+                {{item.chapter.cname}}
+              </div>
+            </div>
+            <div class="row m2-2">
+              <div class="col-2 text-primary">
+                用户:{{item.user.uname}}
+              </div>
+              <div class="col-6"></div>
+              <div class="col-2 d-flex">
+                <div>
+                  <el-popconfirm
+                      title="确定删除吗？"
+                      @confirm="deleteChapterReview(item.crid)"
+                  >
+                    <el-button slot="reference" type="danger" size="small">删除</el-button>
+                  </el-popconfirm>
+                </div>
+                <div class="mx-2">
+                  <el-button type="warning" size="small" @click="setVUser(item)">禁言</el-button>
+                </div>
+              </div>
+            </div>
+            <div class="m-2 shadow-sm">
+              <span class="m-2" style="font-size: medium">{{item.crDate}}</span>
+              <el-input readonly type="textarea" rows="4" :value="item.crContent"></el-input>
+            </div>
+          </li>
+        </ul>
+      </div>
+      <el-dialog
+          title="提示"
+          :visible.sync="dialogVisible"
+          width="50%">
+        <span>
+          <el-form :model="vForm" :rules="rules" ref="vForm" label-width="80px">
+            <el-form-item label="用户名" prop="uname">
+              <el-input v-model="vForm.uname"></el-input>
+            </el-form-item>
+            <el-form-item label="封禁原因" prop="reason">
+              <el-input type="textarea" rows="3" v-model="vForm.reason"></el-input>
+            </el-form-item>
+            <el-form-item label="封禁天数" prop="resDay">
+              <el-select v-model="vForm.resDay" placeholder="请选择">
+                <el-option label="3天" value=3></el-option>
+                <el-option label="7天" value=7></el-option>
+                <el-option label="15天" value=15></el-option>
+                <el-option label="30天" value=30></el-option>
+              </el-select>
+            </el-form-item>
+          </el-form>
+        </span>
+        <span slot="footer" class="dialog-footer">
+          <el-button @click="dialogVisible = false">取 消</el-button>
+          <el-button type="primary" @click="insertVRecord('vForm')">确 定</el-button>
+        </span>
+      </el-dialog>
+      <div>
+        <el-pagination
+            background
+            v-show="chapterReview.total!==0"
+            layout="prev, pager, next"
+            :total="this.chapterReview.total"
+            :current-page="pageNum"
+            :page-size="pageSize"
+            @current-change="handleCurrentChange"
+          >
+        </el-pagination>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
+
 export default {
   name:'ChapterReview',
   data(){
@@ -40,15 +117,93 @@ export default {
       bid:null,
       pageNum:1,
       pageSize:10,
+      cid:null,
+      dialogVisible: false,
       bookList:[],
+      chapterNumber:[],
+      chapterReview:{
+        list:[]
+      },
+      vForm:{
+        uid:null,
+        uname:null,
+        reason:null,
+        resDay:null,
+      },
+      rules: {
+        reason:[
+          {required: true, message: '请输入封禁原因', trigger: 'blur'}
+        ],
+        resDay:[
+          {required: true, message: '请选择天数', trigger: 'change'}
+        ]
+      }
     }
   },
   methods:{
     async selectBookList() {
       const response = await this.$http.get('/book/selectBook')
       this.bookList = response.data.data;
+      this.bid = response.data.data[0].bid
+      return Promise.resolve(response)
     },
+    async selectChapterNumber() {
+      const response = await this.$http.get('/chapter/selectAllChapterNumber?bid='+this.bid)
+      this.chapterNumber = response.data.data;
+      await this.selectChapterReview()
+      return Promise.resolve(response)
+    },
+    async selectChapterReview() {
+      const response = await this.$http.post('/review/selectChapterReview',
+      this.$qs.stringify({
+        pageNum:this.pageNum,
+        pageSize:this.pageSize,
+        bid:this.bid,
+        cid:this.cid,
+      }))
+      this.chapterReview = response.data.data;
+      return Promise.resolve(response)
+    },
+    async deleteChapterReview(val) {
+      await this.$http.get('/review/deleteChapterReview?crid='+val)
+      await this.selectChapterReview()
+    },
+    async insertVRecord(val){
+      this.$refs[val].validate(async (valid) => {
+        if (valid) {
+          await this.$http.post('/vrecord/insertVRecord', {
+            reason:this.vForm.reason,
+            violationResult:this.vForm.resDay,
+            vuid:this.vForm.uid
+          })
+          this.dialogVisible=false
+        } else {
+          alert('信息填写不正确');
+          return false;
+        }
+      });
+    },
+    reSet(){
+      this.cid = null
+      this.selectChapterReview()
+    },
+    handleCurrentChange(val) {
+      this.pageNum = val;
+      this.selectChapterReview();
+    },
+    setVUser(val){
+      this.dialogVisible = true
+      this.vForm.uid = val.user.uid
+      this.vForm.uname = val.user.uname
+    }
   },
+  async mounted() {
+    await this.selectBookList()
+    await this.selectChapterNumber()
+  },
+  async created() {
+
+  }
 }
 </script>
 

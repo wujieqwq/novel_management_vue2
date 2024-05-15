@@ -192,7 +192,7 @@
         this.chapterNum = response.data.data
       },
       async selectBookReviews() {
-        const response = await this.$http.post("/review/selectBookReviewByBid",
+        const response = await this.$http.post("/review/selectBookReviewWithTagByBid",
           this.$qs.stringify({bid:this.bid,
           pageNum:this.pageNum,
           pageSize:this.pageSize,
